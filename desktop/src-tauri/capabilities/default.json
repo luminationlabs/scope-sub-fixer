@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "What the one window may do: pick folders, reveal a file in the file manager, and talk to the engine through the app's own commands. It cannot start a process: the shell plugin is used from Rust only, to run the engine sidecar with one fixed argument list.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    "opener:allow-reveal-item-in-dir"
+  ]
+}

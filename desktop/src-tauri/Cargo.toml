@@ -1,0 +1,38 @@
+[package]
+name = "scope-sub-desktop"
+version = "0.9.0"
+description = "Desktop app for scope-sub: find and fix subtitles in the letterbox bars"
+authors = ["Lumination Labs"]
+license = "MIT"
+repository = "https://github.com/luminationlabs/scope-sub-fixer"
+edition = "2021"
+rust-version = "1.77"
+publish = false
+
+[lib]
+name = "scope_sub_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+# Compile the SCOPE_SUB_AUTOPILOT hook into a release build, for screenshots and
+# unattended end-to-end runs (`pnpm tauri build --features autopilot`). Never
+# for a build that is handed to anyone.
+autopilot = []
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

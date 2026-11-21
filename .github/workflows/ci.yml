@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MKVToolNix and FFmpeg (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y mkvtoolnix ffmpeg
+
+      - name: Install MKVToolNix and FFmpeg (macOS)
+        if: runner.os == 'macOS'
+        run: brew install mkvtoolnix ffmpeg
+
+      # The suite passes on Windows 11 on ARM; this runner is x64 and has not
+      # been seen green yet. MKVToolNix is not put on PATH on purpose: the
+      # tool has to find it in its install folder.
+      - name: Install MKVToolNix and FFmpeg (Windows)
+        if: runner.os == 'Windows'
+        run: choco install mkvtoolnix ffmpeg -y --no-progress
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.12"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - run: node dist/cli/main.js doctor

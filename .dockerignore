@@ -1,0 +1,22 @@
+# Only package.json, pnpm-lock.yaml, the tsconfigs and src/ are needed to build.
+node_modules
+dist
+.git
+.gitignore
+.pnpm-store
+desktop
+.DS_Store
+samples
+test
+docs
+coverage
+.tmp
+*.mkv
+*.sup
+*.tgz
+Dockerfile
+.dockerignore
+docker-compose.yml
+scripts
+PRD.md
+AGENTS.md

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b3140"/>
+      <stop offset="1" stop-color="#12151c"/>
+    </linearGradient>
+    <linearGradient id="pic" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f2a65a"/>
+      <stop offset="1" stop-color="#c8553d"/>
+    </linearGradient>
+  </defs>
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#bg)"/>
+  <!-- a 16:9 frame with black bars, and the scope picture inside it -->
+  <rect x="152" y="260" width="720" height="504" rx="28" fill="#05060a"/>
+  <rect x="152" y="360" width="720" height="304" fill="url(#pic)"/>
+  <!-- the subtitle, now inside the picture -->
+  <rect x="352" y="590" width="320" height="38" rx="19" fill="#ffffff"/>
+  <!-- where it used to be, in the bar -->
+  <rect x="352" y="694" width="320" height="38" rx="19" fill="none" stroke="#ffffff" stroke-opacity="0.38" stroke-width="8" stroke-dasharray="22 16"/>
+</svg>

@@ -1,0 +1,237 @@
+name: Release
+
+# Builds the downloads for a release and attaches them to a draft GitHub
+# release:
+#   - the macOS app (Apple silicon), signed and notarized when the signing
+#     secrets are set, otherwise ad-hoc signed;
+#   - the Windows installer (x64), not signed;
+#   - the command-line tool as an npm package tarball.
+#
+# Runs when a tag "v<version>" is pushed. The tag must match the version in
+# package.json. The release is left as a draft: review it and publish it by
+# hand. "Run workflow" builds everything without making a release.
+#
+# Secrets for a signed macOS app (all six, or none):
+#   APPLE_CERTIFICATE           the Developer ID Application certificate and its
+#                               key, exported as .p12 and base64-encoded
+#   APPLE_CERTIFICATE_PASSWORD  the password given when exporting the .p12
+#   APPLE_SIGNING_IDENTITY      "Developer ID Application: <name> (<team id>)"
+#   APPLE_API_KEY               App Store Connect API key ID
+#   APPLE_API_ISSUER            App Store Connect API issuer ID
+#   APPLE_API_KEY_P8            the contents of the downloaded AuthKey_<id>.p8
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  cli:
+    name: Command-line package
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read the version
+        id: version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "The tag $GITHUB_REF_NAME does not match version $version in package.json." >&2
+            exit 1
+          fi
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.12"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm pack
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cli
+          path: scope-sub-${{ steps.version.outputs.version }}.tgz
+          if-no-files-found: error
+
+  macos:
+    name: macOS app (Apple silicon)
+    needs: cli
+    runs-on: macos-latest
+    env:
+      VERSION: ${{ needs.cli.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.12"
+          cache: pnpm
+
+      - uses: oven-sh/setup-bun@v2
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - name: Build the engine
+        run: pnpm install --frozen-lockfile && pnpm build
+
+      # With the secrets: a Developer ID signature and notarization. Without
+      # them: an ad-hoc signature, which is what lets an Apple silicon Mac run
+      # the app at all. The variables are only set when they have a value.
+      - name: Choose how to sign
+        env:
+          CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          API_KEY: ${{ secrets.APPLE_API_KEY }}
+          API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+        run: |
+          if [ -z "$CERTIFICATE" ]; then
+            echo "No signing secrets: the app gets an ad-hoc signature."
+            echo "APPLE_SIGNING_IDENTITY=-" >> "$GITHUB_ENV"
+            echo "SIGNED=no" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          for name in CERTIFICATE_PASSWORD SIGNING_IDENTITY API_KEY API_ISSUER API_KEY_P8; do
+            if [ -z "$(printenv "$name")" ]; then
+              echo "APPLE_CERTIFICATE is set but APPLE_$name is not. Set all six signing secrets, or none." >&2
+              exit 1
+            fi
+          done
+          key="$RUNNER_TEMP/AuthKey_$API_KEY.p8"
+          printf '%s\n' "$API_KEY_P8" > "$key"
+          # One line, whatever line breaks the secret was pasted with.
+          CERTIFICATE=$(printf '%s' "$CERTIFICATE" | tr -d ' \n\r')
+          {
+            echo "APPLE_CERTIFICATE=$CERTIFICATE"
+            echo "APPLE_CERTIFICATE_PASSWORD=$CERTIFICATE_PASSWORD"
+            echo "APPLE_SIGNING_IDENTITY=$SIGNING_IDENTITY"
+            echo "APPLE_API_KEY=$API_KEY"
+            echo "APPLE_API_ISSUER=$API_ISSUER"
+            echo "APPLE_API_KEY_PATH=$key"
+            echo "SIGNED=yes"
+          } >> "$GITHUB_ENV"
+
+      - name: Build the app
+        working-directory: desktop
+        run: pnpm install --frozen-lockfile && pnpm tauri build --bundles app
+
+      - name: Check the app
+        working-directory: desktop/src-tauri/target/release/bundle/macos
+        run: |
+          app="Scope Sub Fixer.app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          # The engine has to start under the hardened runtime.
+          "$app/Contents/MacOS/scope-sub-engine" --version
+          if [ "$SIGNED" = yes ]; then
+            xcrun stapler validate "$app"
+            spctl --assess --type execute --verbose=2 "$app"
+          fi
+
+      - name: Zip the app
+        working-directory: desktop/src-tauri/target/release/bundle/macos
+        run: ditto -c -k --keepParent "Scope Sub Fixer.app" "$RUNNER_TEMP/Scope-Sub-Fixer-$VERSION-macos-arm64.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: ${{ runner.temp }}/Scope-Sub-Fixer-${{ needs.cli.outputs.version }}-macos-arm64.zip
+          if-no-files-found: error
+
+  # Not signed: Windows shows a SmartScreen warning before the installer runs.
+  # The installer has been built and used on Windows 11 on ARM; this x64 build
+  # has not been tried, so a failure here does not stop the release.
+  windows:
+    name: Windows installer (x64)
+    needs: cli
+    runs-on: windows-latest
+    continue-on-error: true
+    env:
+      VERSION: ${{ needs.cli.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.12"
+          cache: pnpm
+
+      - uses: oven-sh/setup-bun@v2
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - name: Build the engine
+        run: pnpm install --frozen-lockfile && pnpm build
+
+      - name: Build the installer
+        working-directory: desktop
+        run: pnpm install --frozen-lockfile && pnpm tauri build
+
+      - name: Name the installer
+        shell: bash
+        run: |
+          for installer in desktop/src-tauri/target/release/bundle/nsis/*-setup.exe; do
+            cp "$installer" "$RUNNER_TEMP/Scope-Sub-Fixer-$VERSION-windows-x64-setup.exe"
+            break
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: ${{ runner.temp }}/Scope-Sub-Fixer-${{ needs.cli.outputs.version }}-windows-x64-setup.exe
+          if-no-files-found: error
+
+  release:
+    name: Draft release
+    needs: [cli, macos, windows]
+    # The macOS app and the package are required; the Windows installer is
+    # attached when its build succeeded.
+    if: ${{ !cancelled() && github.ref_type == 'tag' && needs.cli.result == 'success' && needs.macos.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.cli.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: downloads
+          merge-multiple: true
+
+      - name: Take this version's notes from the changelog
+        run: |
+          awk -v v="$VERSION" '
+            /^## / { on = ($2 == v) ; next }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          [ -s notes.md ] || echo "See CHANGELOG.md." > notes.md
+
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" downloads/* --draft --title "Scope Sub Fixer $VERSION" --notes-file notes.md

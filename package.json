@@ -1,0 +1,48 @@
+{
+  "name": "scope-sub",
+  "version": "0.9.0",
+  "private": true,
+  "description": "Find and fix Blu-ray PGS subtitles authored inside the letterbox bars of scope MKVs.",
+  "license": "MIT",
+  "author": "Lumination Labs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luminationlabs/scope-sub-fixer.git"
+  },
+  "homepage": "https://github.com/luminationlabs/scope-sub-fixer#readme",
+  "bugs": {
+    "url": "https://github.com/luminationlabs/scope-sub-fixer/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "packageManager": "pnpm@10.20.0",
+  "bin": {
+    "scope-sub": "dist/cli/main.js"
+  },
+  "files": [
+    "dist",
+    "scripts/scope-subs.sh",
+    "scripts/scope-subs.applescript",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli/main.ts",
+    "doctor": "node dist/cli/main.js doctor",
+    "prepack": "node scripts/build.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "commander": "^15.0.0"
+  }
+}
