@@ -34,7 +34,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Read the version
         id: version
@@ -46,11 +46,10 @@ jobs:
             exit 1
           fi
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
+      # The pnpm version comes from "packageManager" in package.json.
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22.12"
           cache: pnpm
@@ -58,7 +57,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm pack
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: cli
           path: scope-sub-${{ steps.version.outputs.version }}.tgz
@@ -71,13 +70,12 @@ jobs:
     env:
       VERSION: ${{ needs.cli.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
+      # The pnpm version comes from "packageManager" in package.json.
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22.12"
           cache: pnpm
@@ -149,7 +147,7 @@ jobs:
         working-directory: desktop/src-tauri/target/release/bundle/macos
         run: ditto -c -k --keepParent "Scope Sub Fixer.app" "$RUNNER_TEMP/Scope-Sub-Fixer-$VERSION-macos-arm64.zip"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: macos
           path: ${{ runner.temp }}/Scope-Sub-Fixer-${{ needs.cli.outputs.version }}-macos-arm64.zip
@@ -166,13 +164,12 @@ jobs:
     env:
       VERSION: ${{ needs.cli.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
+      # The pnpm version comes from "packageManager" in package.json.
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22.12"
           cache: pnpm
@@ -198,7 +195,7 @@ jobs:
             break
           done
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows
           path: ${{ runner.temp }}/Scope-Sub-Fixer-${{ needs.cli.outputs.version }}-windows-x64-setup.exe
@@ -216,9 +213,9 @@ jobs:
     env:
       VERSION: ${{ needs.cli.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: downloads
           merge-multiple: true
