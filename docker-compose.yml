@@ -1,0 +1,35 @@
+# Example deployment. Copy, adjust the two host paths, and run:
+#
+#   docker compose run --rm scope-sub doctor
+#   docker compose run --rm scope-sub scan /media --aspect auto --recursive
+#   docker compose run --rm scope-sub plan /media --plan /work/plan --recursive
+#   docker compose run --rm scope-sub plan-show /work/plan
+#   docker compose run --rm scope-sub apply /work/plan --output-root /work/fixed
+#   docker compose run --rm scope-sub apply /work/plan --output-root /work/fixed --execute
+#
+# `apply` is a dry run until `--execute`. Repairs land in /work/fixed, i.e. on
+# the read-write volume; the library stays mounted read-only, so
+# `--replace-original` cannot be used here by construction. To swap files in,
+# do it deliberately from the host after you have watched the results.
+
+services:
+  scope-sub:
+    build: .
+    image: scope-sub
+    # The media library. Read-only on purpose — see above.
+    # The output/plan directory, read-write.
+    volumes:
+      - /srv/media/movies:/media:ro
+      - ./scope-sub-work:/work
+    working_dir: /work
+    environment:
+      # Extracted .sup files and copy-with-patches scratch. Point TMPDIR at the
+      # /work volume if the container's own /tmp is small: a remux needs room
+      # for one whole output file.
+      TMPDIR: /tmp
+      # Only needed for an unusual install; the image has both on PATH.
+      # SCOPE_SUB_MKVTOOLNIX_DIR: /usr/bin
+      # SCOPE_SUB_FFMPEG: /usr/bin/ffmpeg
+    # Write outputs as your own user rather than root:
+    # user: "1000:1000"
+    command: ["doctor"]

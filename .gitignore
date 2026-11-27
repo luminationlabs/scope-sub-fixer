@@ -1,0 +1,28 @@
+node_modules/
+dist/
+samples/
+*.sup
+*.mkv
+.tmp/
+coverage/
+.pnpm-store/
+*.tgz
+.DS_Store
+
+# Local settings and secrets
+.env
+.env.*
+
+# What the tool itself writes: unfinished copies, swap staging, backups
+*.scope-sub-partial
+.scopefix-staging/
+*.pre-scopefix
+
+# Other media that has no business in a repository
+*.m2ts
+*.mp4
+*.m4v
+
+# Editors
+.vscode/
+.idea/
