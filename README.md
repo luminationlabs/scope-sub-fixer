@@ -181,8 +181,8 @@ installer is not signed, so Windows shows a warning before it runs: choose
   here. The test suite passes.
 - Windows 11 on ARM64: the test suite passes. The app was built as an
   installer, installed and used by hand.
-- Windows on x64: the installer is built for each release. It has not been
-  tried by hand, and the test suite has not been seen to pass there.
+- Windows on x64: the installer is built for each release and has been
+  installed and run by hand.
 - Linux: the test suite passes on Ubuntu 24.04, on ARM64 and x64. The
   command-line tool builds and runs. The app has not been built.
 
