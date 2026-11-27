@@ -7,10 +7,12 @@ screen the bars fall outside the screen, and the subtitles cannot be seen.
 Scope Sub Fixer finds these subtitles in MKV files and moves them up into the
 picture. It is for people who watch films on a scope screen.
 
-![The app after a scan](desktop/docs/screenshots/04-results.png)
+![Before: a subtitle in the letterbox bar, outside a scope screen. After: the same subtitle inside the picture.](docs/images/before-after.jpg)
 
 It comes as a desktop app and as a command-line tool, `scope-sub`. Both use the
 same engine.
+
+![The app after a scan](desktop/docs/screenshots/04-results.png)
 
 ## What it does to a file
 
